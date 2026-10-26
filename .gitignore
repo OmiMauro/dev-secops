@@ -6,3 +6,6 @@ coverage/
 # Real environment variables: NEVER committed.
 # Only .env.example (without secret values) is versioned.
 .env
+
+# Security tool reports
+reports/

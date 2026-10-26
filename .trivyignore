@@ -1,0 +1,7 @@
+# Vulnerabilities accepted on purpose. Trivy skips the IDs listed here.
+#
+# Every entry MUST have a reason and an expiry date, so it gets reviewed
+# instead of silently living here forever. Example:
+#
+# CVE-2026-00000 exp:2026-12-31
+#   Only reachable through file uploads, which this API does not expose.
