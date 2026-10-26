@@ -1,8 +1,14 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { loadSecretsFromVault } from './config/vault';
 
 async function bootstrap() {
+  // Secrets must be in process.env BEFORE AppModule is loaded, because
+  // ConfigModule validates the environment as soon as it is imported.
+  // That is why AppModule is imported here and not at the top of the file.
+  await loadSecretsFromVault();
+  const { AppModule } = await import('./app.module');
+
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');

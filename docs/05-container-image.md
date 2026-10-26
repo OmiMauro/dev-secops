@@ -58,9 +58,9 @@ Read the comments in the `Dockerfile`: every line explains its reason.
 ## Running it
 
 ```bash
-docker compose --profile app up -d --build
+scripts/stack.sh up            # since step 8 this also starts Vault
 curl localhost:3000/api/health
-docker compose --profile app down
+scripts/stack.sh down
 ```
 
 The `api` service adds **runtime** hardening on top of the image:

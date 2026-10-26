@@ -14,10 +14,12 @@ npm run start:dev             # API at http://localhost:3000/api
 
 Other commands: `npm test`, `npm run lint`, `npm run build`.
 
-Run the whole stack in containers, with the production image:
+Run the whole stack in containers (PostgreSQL + Vault + the production
+image, secrets loaded from Vault):
 
 ```bash
-docker compose --profile app up -d --build
+scripts/stack.sh up
+scripts/stack.sh down
 ```
 
 ## Repository layout
@@ -112,6 +114,6 @@ Authenticated routes need the header `Authorization: Bearer <accessToken>`.
 - [x] 5. Container image — Dockerfile + Trivy ([guide](docs/05-container-image.md))
 - [x] 6. SBOM and signing — Syft, Cosign ([guide](docs/06-sbom-signing.md))
 - [x] 7. IaC — Terraform, Checkov, Conftest ([guide](docs/07-iac.md))
-- [ ] 8. Secrets in production — Vault
+- [x] 8. Secrets in production — Vault ([guide](docs/08-vault.md))
 - [ ] 9. DAST — OWASP ZAP
 - [ ] 10. Full pipeline
