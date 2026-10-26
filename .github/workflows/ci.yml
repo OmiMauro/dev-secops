@@ -313,7 +313,14 @@ jobs:
   # Pull requests, scheduled runs and failed gates never produce a release.
   release:
     name: Publish, SBOM and sign
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # always() + an explicit check on the gate, NOT the default success():
+    # success() looks at every ancestor job, and dependency-review is always
+    # skipped on pushes, so release was silently skipped on every push too.
+    if: >-
+      always()
+      && needs.gate.result == 'success'
+      && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
     needs: [gate]
     runs-on: ubuntu-latest
     timeout-minutes: 15

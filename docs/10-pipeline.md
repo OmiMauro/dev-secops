@@ -126,6 +126,17 @@ Two details that are easy to get wrong:
   The gate must run in order to fail.
 - **`skipped` is accepted**: `dependency-review` only runs on pull
   requests. The gate fails only on `failure` or `cancelled`.
+- **The same trap one level down**: `release` needs only `gate`, but the
+  default `success()` condition checks **every ancestor**, including the
+  skipped `dependency-review`. So `release` was silently skipped on every
+  push to `main`, and no image was ever published. Found only by reading
+  the run on GitHub. The fix is an explicit condition:
+
+  ```yaml
+  if: >-
+    always() && needs.gate.result == 'success'
+    && github.event_name == 'push' && github.ref == 'refs/heads/main'
+  ```
 
 ### Make it mandatory
 
