@@ -1,0 +1,28 @@
+# OWASP ZAP rule configuration, read by scripts/security/dast.sh
+# Format (tab separated): <rule id>	<IGNORE|WARN|FAIL>	<rule name / reason>
+# Rules not listed use their default (WARN). FAIL breaks the build.
+#
+# Injection: a hit here is a real, exploitable vulnerability.
+40018	FAIL	SQL Injection
+40022	FAIL	SQL Injection - PostgreSQL (time based)
+40012	FAIL	Cross Site Scripting (Reflected)
+# 40014 (persistent XSS) is WARN, not FAIL: ZAP stores "<script>" in a
+# note and gets it back inside JSON. This API only returns JSON, with
+# nosniff and a CSP, so it is not exploitable here; a frontend must still
+# escape note content when rendering it. Packaged scans cannot target the
+# JSON-only variant (40014-2), so the whole rule is downgraded and stays
+# visible as a warning. Revisit if the API ever returns HTML.
+40014	WARN	Cross Site Scripting (Persistent) - see comment above
+90020	FAIL	Remote OS Command Injection
+90019	FAIL	Server Side Code Injection
+40003	FAIL	CRLF Injection
+6	FAIL	Path Traversal
+#
+# Robustness: unexpected input must give a 4xx, never a 500.
+100000	FAIL	A Server Error response code was returned by the server
+#
+# Hardening headers, fixed with helmet in src/main.ts. FAIL so they
+# cannot silently regress.
+10021	FAIL	X-Content-Type-Options Header Missing
+10037	FAIL	Server Leaks Information via X-Powered-By
+90004	FAIL	Cross-Origin-Resource-Policy Header Missing or Invalid

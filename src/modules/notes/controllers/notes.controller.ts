@@ -12,6 +12,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { AuthUser, JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { CreateNoteDto } from '../dto/create-note.dto';
@@ -27,6 +28,7 @@ import { NotesService } from '../services/notes.service';
  */
 @Controller('notes')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}
 
