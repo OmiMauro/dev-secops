@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Note } from '../entities/note.entity';
 import { NotesService } from './notes.service';
 
@@ -8,15 +9,14 @@ describe('NotesService', () => {
   let service: NotesService;
   // Fake repository: tests the logic without a real database.
   const repository = {
-    findOne: jest.fn(),
-    find: jest.fn(),
-    create: jest.fn(),
-    save: jest.fn(),
-    remove: jest.fn(),
+    findOne: vi.fn(),
+    find: vi.fn(),
+    create: vi.fn(),
+    save: vi.fn(),
+    remove: vi.fn(),
   };
 
   beforeEach(async () => {
-    jest.resetAllMocks();
     const moduleRef = await Test.createTestingModule({
       providers: [
         NotesService,

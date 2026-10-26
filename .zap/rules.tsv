@@ -26,3 +26,7 @@
 10021	FAIL	X-Content-Type-Options Header Missing
 10037	FAIL	Server Leaks Information via X-Powered-By
 90004	FAIL	Cross-Origin-Resource-Policy Header Missing or Invalid
+#
+# 100001 (Unexpected Content-Type) stays WARN: since NestJS 12, requests
+# OUTSIDE the /api prefix get Express's default HTML 404 instead of Nest's
+# JSON one. Harmless (CSP default-src 'none', nosniff), kept visible.

@@ -12,7 +12,7 @@ npm install
 npm run start:dev             # API at http://localhost:3000/api
 ```
 
-Other commands: `npm test`, `npm run lint`, `npm run build`.
+Other commands: `npm test` (Vitest), `npm run test:watch`, `npm run lint`, `npm run build`.
 
 Run the whole stack in containers (PostgreSQL + Vault + the production
 image, secrets loaded from Vault):

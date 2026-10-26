@@ -1,4 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "dist", "**/*.spec.ts", ".semgrep"]
+  "exclude": ["node_modules", "dist", "**/*.spec.ts", ".semgrep", "vitest.config.mts"]
 }

@@ -28,7 +28,7 @@ Steps 1–9 each added a tool. This step makes them one system:
 
 | Job | Tool(s) | Local equivalent | Breaks on |
 |-----|---------|------------------|-----------|
-| `build` | eslint, jest, tsc, npm | `npm run lint && npm test && npm run build` | Any error |
+| `build` | eslint, vitest, tsc, npm | `npm run lint && npm test && npm run build` | Any error |
 | `workflows` | actionlint, zizmor | `scripts/security/workflows.sh` | Any finding |
 | `secrets` | gitleaks | `scripts/security/secrets.sh` | Any secret in history |
 | `sca` | Trivy | `scripts/security/sca.sh` | Fixable HIGH/CRITICAL CVE |

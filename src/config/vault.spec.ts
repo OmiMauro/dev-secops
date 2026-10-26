@@ -1,11 +1,11 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { loadSecretsFromVault } from './vault';
 
 describe('loadSecretsFromVault', () => {
-  const fetchMock = jest.fn();
+  const fetchMock = vi.fn();
 
   beforeEach(() => {
-    fetchMock.mockReset();
-    global.fetch = fetchMock;
+    vi.stubGlobal('fetch', fetchMock);
   });
 
   const jsonResponse = (body: unknown, status = 200) =>
