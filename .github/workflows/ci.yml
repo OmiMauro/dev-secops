@@ -177,12 +177,36 @@ jobs:
           sarif_file: reports/image.sarif
           category: trivy-image
 
+  iac:
+    name: Infrastructure as Code (Checkov + Conftest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate, scan and apply policies
+        run: scripts/security/iac.sh
+
+      - name: Upload results to GitHub Security
+        if: always() && hashFiles('reports/checkov.sarif') != ''
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: reports/checkov.sarif
+          category: checkov
+
   # Publishes the image ONLY if every security job above passed, and only
   # from main. Pull requests and failed gates never produce an artifact.
   release:
     name: Publish, SBOM and sign
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [build, secrets, sca, sast, image]
+    needs: [build, secrets, sca, sast, image, iac]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

@@ -15,6 +15,18 @@ regex = '''JWT_SECRET\s*[=:]\s*['"]?([A-Za-z0-9+/=_\-]{32,})'''
 secretGroup = 1
 keywords = ["jwt_secret"]
 
+# Custom rule: passwords chosen by humans ("SuperSecret123!") have no
+# known format and low entropy, so the default rules miss them. In
+# Terraform a literal password is never correct: use
+# manage_master_user_password or a secret manager.
+[[rules]]
+id = "terraform-hardcoded-password"
+description = "Literal password in Terraform code"
+path = '''\.tf$'''
+regex = '''(?i)\bpassword\s*=\s*"([^"$]{6,})"'''
+secretGroup = 1
+keywords = ["password"]
+
 # Files that may contain secret-looking strings on purpose.
 # Keep this list short: every entry is a place where leaks go unseen.
 [[allowlists]]
