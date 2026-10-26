@@ -130,3 +130,25 @@ In March 2026 attackers force-pushed 76 version tags of
 ([CVE-2026-33634](https://www.aquasec.com/blog/trivy-supply-chain-attack-what-you-need-to-know)).
 Pipelines using `@v0.x` tags ran the malware; pipelines pinned to a
 SHA did not. Security tools are a supply chain too.
+
+## Lesson learned later: a scanner that cannot scan
+
+While working on the Dependabot PRs in a `git worktree`, the pre-commit
+hook said `no leaks found` for a commit that **did** contain a token.
+Inside the container git could not read the repository (a worktree's
+`.git` points outside the mounted folder), and gitleaks reacted like this:
+
+```
+ERR [git] fatal: not a git repository: .../.git/worktrees/-lab-pr
+INF no leaks found          ← exit code 0
+```
+
+It **failed open**: it scanned nothing and reported success. Two fixes in
+`scripts/security/secrets.sh`:
+
+1. Mount the real git directory when the repo is a worktree.
+2. **Fail closed**: any `ERR` line from gitleaks fails the script, even
+   if it claims there were no leaks.
+
+Lesson: test that your security checks can fail. A check that never
+fails might not be running at all.
