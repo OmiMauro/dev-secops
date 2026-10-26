@@ -89,7 +89,7 @@ Authenticated routes need the header `Authorization: Bearer <accessToken>`.
 - [x] 0. Base app
 - [x] 1. Pipeline in GitHub Actions (lint, test, build)
 - [x] 2. Secrets in code — gitleaks, pre-commit ([guide](docs/02-secrets.md))
-- [ ] 3. Dependencies and SCA — Trivy, Dependabot
+- [x] 3. Dependencies and SCA — Trivy, Dependabot ([guide](docs/03-dependencies-sca.md))
 - [ ] 4. SAST — Semgrep
 - [ ] 5. Container image — Dockerfile + Trivy
 - [ ] 6. SBOM and signing — Syft, Cosign

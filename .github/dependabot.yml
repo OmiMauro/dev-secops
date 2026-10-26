@@ -1,0 +1,31 @@
+# Dependabot opens pull requests to keep dependencies up to date.
+# Security updates (for known CVEs) are separate: enable them in
+# Settings → Advanced Security → Dependabot security updates.
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait 7 days before proposing a brand-new release. Most malicious
+    # package versions are detected and pulled within hours or days.
+    # This does not delay security updates.
+    cooldown:
+      default-days: 7
+    # One PR per group instead of one per package: less noise.
+    groups:
+      nestjs:
+        patterns: ["@nestjs/*"]
+      dev-dependencies:
+        dependency-type: development
+    open-pull-requests-limit: 5
+
+  # Also bumps the pinned SHAs in .github/workflows/*.yml
+  # (and keeps the "# vX.Y.Z" comment in sync).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
