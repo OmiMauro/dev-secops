@@ -15,10 +15,19 @@ updates:
       default-days: 7
     # One PR per group instead of one per package: less noise.
     groups:
+      # Every @nestjs/* package, production AND development: NestJS
+      # packages declare each other as peer dependencies, so they must move
+      # together. Split across two PRs, neither one installs (ERESOLVE).
       nestjs:
         patterns: ["@nestjs/*"]
       dev-dependencies:
         dependency-type: development
+        exclude-patterns: ["@nestjs/*"]
+    ignore:
+      # @types/node must match the Node version we RUN (.nvmrc, Dockerfile),
+      # not the newest one. A Node major upgrade is done by hand, see below.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     open-pull-requests-limit: 5
 
   # Also bumps the pinned SHAs in .github/workflows/*.yml
@@ -38,6 +47,13 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+    ignore:
+      # A Node major upgrade touches .nvmrc, @types/node, the build images
+      # AND the runtime image, whose NAME changes (distroless/nodejs24 →
+      # nodejs26). Dependabot can only bump one tag, so it would build with
+      # Node 26 and run on Node 24. Major upgrades are done by hand.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
 
   # Bumps the AWS provider version and .terraform.lock.hcl.
   - package-ecosystem: terraform

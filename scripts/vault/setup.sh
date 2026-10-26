@@ -7,7 +7,7 @@
 #
 # Usage: eval "$(scripts/vault/setup.sh)"     (scripts/stack.sh does this)
 set -euo pipefail
-cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
+cd "$(dirname "$0")/../.."
 
 # shellcheck disable=SC1091
 set -a; source .env; set +a

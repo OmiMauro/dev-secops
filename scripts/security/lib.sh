@@ -2,8 +2,10 @@
 
 set -euo pipefail
 
-# Repository root, no matter where the script is called from.
-REPO_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
+# Repository root, no matter where the script is called from. Derived from
+# this file's location, not from git: inside a git hook, git sets GIT_DIR
+# and `git rev-parse --show-toplevel` then returns the wrong directory.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # shellcheck source=images.sh
 source "$REPO_ROOT/scripts/security/images.sh"

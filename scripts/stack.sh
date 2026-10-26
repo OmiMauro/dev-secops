@@ -6,7 +6,7 @@
 #   scripts/stack.sh up      build and start everything, wait until healthy
 #   scripts/stack.sh down    stop everything (Vault dev data is lost)
 set -euo pipefail
-cd "$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
+cd "$(dirname "$0")/.."
 
 case "${1:-}" in
   up)
