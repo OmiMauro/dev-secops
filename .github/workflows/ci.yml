@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Mínimo privilegio: por defecto el GITHUB_TOKEN puede escribir en el
+# repo. Este workflow solo necesita leer el código.
+permissions:
+  contents: read
+
+# Si haces push dos veces seguidas, cancela la ejecución anterior.
+# Ahorra minutos de Actions.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Lint, test y build
+    runs-on: ubuntu-latest
+    # Si algo se cuelga, que no consuma 6 horas (el máximo por defecto).
+    timeout-minutes: 10
+
+    steps:
+      # Las actions se fijan por SHA del commit, no por tag: un tag
+      # (v7) puede moverse a otro código si roban la cuenta del autor;
+      # un SHA es inmutable. El comentario indica la versión legible.
+      - name: Descargar el código
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No dejar el token guardado en .git/config para los pasos
+          # siguientes (ninguno necesita hacer push).
+          persist-credentials: false
+
+      - name: Instalar Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # npm ci instala exactamente lo que dice package-lock.json:
+      # mismas versiones que en tu máquina, nada "más nuevo" colado.
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
