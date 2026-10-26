@@ -20,6 +20,17 @@ Run the whole stack in containers, with the production image:
 docker compose --profile app up -d --build
 ```
 
+## Repository layout
+
+| Path | What |
+|------|------|
+| `src/` | The NestJS API |
+| `scripts/security/` | One script per security tool; CI runs the same scripts |
+| `docs/` | One guide per step, with exercises |
+| `.semgrep/rules/` | Custom SAST rules |
+| `policy/terraform/` | Policy as Code (Rego) |
+| `terraform/` | AWS infrastructure (scanned, never applied) |
+
 ## Architecture
 
 The code is organized **by module** (each feature lives together) and,
@@ -100,7 +111,7 @@ Authenticated routes need the header `Authorization: Bearer <accessToken>`.
 - [x] 4. SAST — Semgrep ([guide](docs/04-sast.md))
 - [x] 5. Container image — Dockerfile + Trivy ([guide](docs/05-container-image.md))
 - [x] 6. SBOM and signing — Syft, Cosign ([guide](docs/06-sbom-signing.md))
-- [ ] 7. IaC — Terraform + Checkov
+- [x] 7. IaC — Terraform, Checkov, Conftest ([guide](docs/07-iac.md))
 - [ ] 8. Secrets in production — Vault
 - [ ] 9. DAST — OWASP ZAP
 - [ ] 10. Full pipeline

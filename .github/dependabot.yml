@@ -38,3 +38,11 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+
+  # Bumps the AWS provider version and .terraform.lock.hcl.
+  - package-ecosystem: terraform
+    directory: /terraform
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

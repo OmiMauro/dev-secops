@@ -9,3 +9,8 @@ coverage/
 
 # Security tool reports
 reports/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
