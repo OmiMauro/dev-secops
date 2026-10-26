@@ -9,7 +9,7 @@
 # ---------- 1. build: compile TypeScript ----------
 # Same Debian release (trixie) as the runtime image, so any native module
 # built here links against the same glibc.
-FROM node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea AS build
+FROM node:26.11.1-trixie-slim@sha256:193fe51b64e77981119c98c2002c9e32a70e2f006fb4d25068ce0558998917f0 AS build
 WORKDIR /app
 
 # Copy only the manifests first: this layer (and npm ci) is cached until
@@ -22,7 +22,7 @@ COPY src ./src
 RUN npm run build
 
 # ---------- 2. prod-deps: runtime dependencies only ----------
-FROM node:24.22.1-trixie-slim@sha256:43b9ba1142b8dcf33fa8f922ca1be85714adc444e0586c7cf7726daaeabc1bea AS prod-deps
+FROM node:26.11.1-trixie-slim@sha256:193fe51b64e77981119c98c2002c9e32a70e2f006fb4d25068ce0558998917f0 AS prod-deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
