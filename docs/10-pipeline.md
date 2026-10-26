@@ -15,14 +15,14 @@ Steps 1–9 each added a tool. This step makes them one system:
 
 ```
   build ─────────────┐   lint, unit tests, tsc, npm audit signatures
-  workflows ─────────┤   actionlint + zizmor on ci.yml itself
+  workflows ─────────┤   actionlint + zizmor on the workflows themselves
   secrets ───────────┤   gitleaks on the whole git history
   sca ───────────────┤   Trivy on package-lock.json
   dependency-review ─┤   new vulnerable deps in a PR (PRs only)
-  sast ──────────────┼──▶ gate ──▶ release
-  image ─────────────┤      │       push to GHCR, Syft SBOM,
-  iac ───────────────┤      │       Cosign keyless sign + attest, verify
-  dast ──────────────┘      │       (push to main only)
+  sast ──────────────┼──▶ gate ──▶ release ──▶ promote.yml (manual)
+  iac ───────────────┤      │       push sha-<commit>, Syft SBOM,
+  image ──┬──────────┤      │       Cosign sign + attest, tag "develop"
+          └─▶ dast ──┘      │       (push to main only)
                             └─ required status check
 ```
 
@@ -34,9 +34,9 @@ Steps 1–9 each added a tool. This step makes them one system:
 | `sca` | Trivy | `scripts/security/sca.sh` | Fixable HIGH/CRITICAL CVE |
 | `dependency-review` | GitHub | (PRs only) | PR adds a HIGH+ vulnerable dep |
 | `sast` | Semgrep | `scripts/security/sast.sh test && …/sast.sh` | Any finding, or a failing rule test |
-| `image` | Trivy | `scripts/security/image.sh` | Dockerfile misconfig or fixable HIGH/CRITICAL CVE |
+| `image` | Docker, Trivy | `scripts/security/image.sh` | Dockerfile misconfig or fixable HIGH/CRITICAL CVE. **The only `docker build` in the pipeline** |
 | `iac` | Terraform, Checkov, Conftest | `scripts/security/iac.sh` | Any failed check or policy |
-| `dast` | OWASP ZAP | `scripts/stack.sh up && …/dast.sh` | Any rule set to FAIL in `.zap/rules.tsv` |
+| `dast` | OWASP ZAP | `scripts/stack.sh up && …/dast.sh` (CI: `up --no-build` on the image job's image) | Any rule set to FAIL in `.zap/rules.tsv` |
 | `gate` | — | — | Any job above failed or was cancelled |
 | `release` | Buildx, Syft, Cosign | `sbom.sh`, `sign-local.sh` | (runs only after the gate) |
 
@@ -152,6 +152,61 @@ without passing every check. Requiring only `Security gate`, instead of
 each job, means adding a new job to the pipeline does not require
 touching the ruleset.
 
+## Build once, promote
+
+The image is built **once**, in the `image` job. Every later stage uses
+that exact image:
+
+```
+image ── docker build ── Trivy scan ── docker save → artifact
+   │                                  config digest: sha256:27af1a…
+   ├─▶ dast ──── docker load ── stack.sh up --no-build ── ZAP
+   └─▶ release ─ docker load ── check digest == scanned ── push sha-<commit>
+                 ── check registry config == scanned ── SBOM ── sign ── tag develop
+
+promote.yml ── verify signature + SBOM ── check it runs in the previous env
+            ── crane tag <same digest> staging | qa | preprod | prod
+```
+
+Why it matters: a rebuild is a **different artifact**. Even from the same
+commit it can pull a newer base image or a different transitive
+dependency. If staging tested one build and prod got another, prod runs
+something nobody scanned.
+
+How each step keeps the guarantee:
+
+- **One fingerprint**: the image's *config digest*, computed by
+  `scripts/release/config-digest.sh` from the `docker save` tar. It stays
+  the same through save, load, push, pull and retag, on any Docker.
+- **`release` checks it twice**: the downloaded artifact must match the
+  digest from the `image` job, and so must the config in the registry
+  after the push. Otherwise nothing is signed.
+- **`stack.sh up --no-build`** and **`pull_policy: never`**: DAST runs
+  the loaded image, or fails. It never builds or pulls a different one.
+- **Promotion moves a tag, nothing else**: `crane tag <digest> prod`.
+  Same digest, same signature, same SBOM.
+
+### Environments
+
+```
+develop ──▶ staging ──▶ qa ──▶ preprod ──▶ prod
+```
+
+- `develop` is set by `ci.yml` on every push to `main`.
+- The others: *Actions → Promote → Run workflow*, with the commit SHA and
+  the target environment. `promote.yml`:
+  1. verifies the Cosign signature (only `ci.yml` on `main` is trusted) and
+     the SBOM attestation,
+  2. refuses if the release is not what the **previous** environment runs
+     (no jumping from develop straight to prod),
+  3. moves the environment's tag to the same digest.
+- Each run uses a GitHub **Environment** with the same name. Create them
+  in *Settings → Environments* and add **required reviewers** to `prod`
+  (and `preprod`): the promotion waits for a human approval.
+
+Deployments then pull by environment tag (`:staging`, `:prod`) or,
+better, by the digest the tag points to.
+
 ## The pipeline is an attack target
 
 A workflow can read secrets and publish releases, so it gets the same
@@ -179,7 +234,8 @@ permission line now says why it exists.
   line of code. Fixed findings close automatically.
 - **Security → Dependabot**: CVE alerts on dependencies.
 - **Artifacts** of each run: `zap-report` (HTML) and `sbom`.
-- **Packages**: the signed image in `ghcr.io/omimauro/dev-secops`.
+- **Packages**: the signed image in `ghcr.io/omimauro/dev-secops`, one
+  `sha-<commit>` tag per release plus one tag per environment.
 
 ## What each tool caught in this repo
 

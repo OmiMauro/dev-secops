@@ -1,0 +1,114 @@
+# Promotes an already published image to the next environment:
+#
+#   develop ──▶ staging ──▶ qa ──▶ preprod ──▶ prod
+#   (set by ci.yml on every push to main)
+#
+# Promotion never builds anything. It moves the environment's tag to the
+# SAME digest that was built, scanned, attacked by DAST and signed in
+# ci.yml. What reaches prod is byte for byte what passed every check.
+#
+# Run it from the Actions tab → "Promote" → "Run workflow", with the commit
+# SHA of the release and the target environment.
+name: Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Full commit SHA of the release (image tag sha-<SHA>)
+        required: true
+        type: string
+      environment:
+        description: Environment to promote to
+        required: true
+        type: choice
+        options: [staging, qa, preprod, prod]
+
+permissions: {}
+
+# One promotion per environment at a time; never cancel one halfway.
+concurrency:
+  group: promote-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Promote to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # A GitHub Environment with the same name. Its protection rules apply
+    # here: e.g. required reviewers for prod (Settings → Environments).
+    environment: ${{ inputs.environment }}
+    permissions:
+      packages: write # move tags in ghcr.io
+
+    steps:
+      - name: Validate input and find the previous environment
+        env:
+          VERSION: ${{ inputs.version }}
+          TARGET: ${{ inputs.environment }}
+        run: |
+          # A full 40-character SHA, nothing else: this value ends up in an
+          # image reference.
+          [[ "$VERSION" =~ ^[0-9a-f]{40}$ ]] || { echo "version must be a full commit SHA"; exit 1; }
+          case "$TARGET" in
+            staging) previous=develop ;;
+            qa)      previous=staging ;;
+            preprod) previous=qa ;;
+            prod)    previous=preprod ;;
+          esac
+          {
+            echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}"
+            echo "PREVIOUS=$previous"
+          } >> "$GITHUB_ENV"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install crane
+        uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b # v0.7
+        with:
+          version: v0.22.1
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Resolve the release digest
+        env:
+          VERSION: ${{ inputs.version }}
+        run: echo "DIGEST=$(crane digest "$IMAGE:sha-$VERSION")" >> "$GITHUB_ENV"
+
+      # Only images signed by ci.yml on main can be promoted. An image pushed
+      # by hand, from a branch or from a fork has no valid signature.
+      - name: Verify signature and SBOM attestation
+        env:
+          IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/ci.yml@refs/heads/main
+          ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          cosign verify "$IMAGE@$DIGEST" \
+            --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" >/dev/null
+          cosign verify-attestation "$IMAGE@$DIGEST" --type cyclonedx \
+            --certificate-identity "$IDENTITY" --certificate-oidc-issuer "$ISSUER" >/dev/null
+          echo "Signature and SBOM attestation verified for $DIGEST"
+
+      # No skipping environments: prod only accepts what preprod is running.
+      - name: Check it is running in the previous environment
+        run: |
+          current="$(crane digest "$IMAGE:$PREVIOUS")"
+          echo "$PREVIOUS runs: $current"
+          echo "to promote:   $DIGEST"
+          if [[ "$current" != "$DIGEST" ]]; then
+            echo "This release is not in $PREVIOUS. Promote it there first."
+            exit 1
+          fi
+
+      - name: Move the ${{ inputs.environment }} tag
+        env:
+          TARGET: ${{ inputs.environment }}
+        run: |
+          crane tag "$IMAGE@$DIGEST" "$TARGET"
+          echo "$TARGET now runs $DIGEST"

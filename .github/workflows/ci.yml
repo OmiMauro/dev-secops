@@ -6,13 +6,16 @@
 #   secrets ───────────┤
 #   sca ───────────────┤
 #   dependency-review ─┤  (pull requests only)
-#   sast ──────────────┼──▶ gate ──▶ release
-#   image ─────────────┤     │         (push to main only:
-#   iac ───────────────┤     │          GHCR + SBOM + Cosign)
-#   dast ──────────────┘     │
-#                            └─ the single check required by branch protection
+#   sast ──────────────┼──▶ gate ──▶ release ──▶ promote.yml (manual)
+#   iac ───────────────┤      ▲        │           develop → staging → qa
+#   image ──┬──────────┤      │        │           → preprod → prod
+#           └─▶ dast ──┘      │        └─ push to main only
+#                             └─ the single check required by branch protection
 #
-# All jobs before the gate run in parallel. See docs/10-pipeline.md.
+# Build once, promote: the image is built ONCE, in the "image" job. That
+# exact image (same config digest) is scanned, attacked by DAST, published,
+# signed, and then promoted between environments by moving a tag. Nothing
+# downstream ever runs `docker build` again. See docs/10-pipeline.md.
 name: CI
 
 on:
@@ -186,13 +189,19 @@ jobs:
           sarif_file: reports/sast.sarif
           category: semgrep
 
+  # Builds the image ONCE. Every later job uses this exact image, passed
+  # along as an artifact, so what gets scanned is what gets released.
   image:
-    name: Container image (build + Trivy)
+    name: Container image (build once + Trivy)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read # clone the repository
       security-events: write # upload results to the Security tab
+    outputs:
+      # Fingerprint of the image content. The release job checks that the
+      # image it publishes has exactly this digest.
+      config-digest: ${{ steps.save.outputs.config-digest }}
 
     steps:
       - name: Checkout
@@ -202,6 +211,19 @@ jobs:
 
       - name: Build and scan the image
         run: scripts/security/image.sh
+
+      - name: Save the image for the next jobs
+        id: save
+        run: |
+          docker save dev-secops:local -o image.tar
+          echo "config-digest=$(scripts/release/config-digest.sh image.tar)" >> "$GITHUB_OUTPUT"
+
+      - name: Share the image with dast and release
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image
+          path: image.tar
+          retention-days: 1 # only needed during this run
 
       - name: Upload Dockerfile results
         if: always() && hashFiles('reports/dockerfile.sarif') != ''
@@ -243,8 +265,11 @@ jobs:
 
   # Starts the real stack (PostgreSQL + Vault + the API image) and attacks
   # it with OWASP ZAP. Slowest job, so it runs in parallel with the rest.
+  # Starts the real stack (PostgreSQL + Vault + the API) and attacks it
+  # with OWASP ZAP. The API runs the image built by the "image" job.
   dast:
     name: Dynamic scan (OWASP ZAP)
+    needs: [image]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -255,6 +280,14 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Download the image
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image
+
+      - name: Load the image
+        run: docker load -i image.tar
 
       # Random values for this run only. The environment is destroyed when
       # the job ends, so they never need to be stored anywhere.
@@ -267,8 +300,15 @@ jobs:
             -e "s|^VAULT_ROOT_TOKEN=.*|VAULT_ROOT_TOKEN=$(openssl rand -hex 16)|" \
             .env
 
+      # --no-build: run the loaded image, never a fresh build.
+      # The rate limits are raised ONLY here: ZAP sends hundreds of attacks
+      # to the same routes, and 429 answers would hide what it is testing.
       - name: Start the stack
-        run: SWAGGER_ENABLED=true scripts/stack.sh up
+        env:
+          SWAGGER_ENABLED: "true"
+          THROTTLE_LIMIT: "100000"
+          AUTH_THROTTLE_LIMIT: "100000"
+        run: scripts/stack.sh up --no-build
 
       - name: Scan with ZAP
         run: scripts/security/dast.sh
@@ -285,10 +325,6 @@ jobs:
           path: reports/zap/report.*
           if-no-files-found: ignore
 
-  # One job that sums up all the others. Branch protection requires only
-  # this check, instead of a list of jobs that is easy to get out of date.
-  # always(): it must run (and fail) when a job it depends on fails;
-  # without it, it would be "skipped", and skipped counts as passing.
   gate:
     name: Security gate
     if: always()
@@ -311,6 +347,9 @@ jobs:
 
   # Publishes the image ONLY if the gate passed, and only from main.
   # Pull requests, scheduled runs and failed gates never produce a release.
+  # Publishes the image ONLY if the gate passed, and only from main.
+  # Pull requests, scheduled runs and failed gates never produce a release.
+  # It does not build anything: it publishes the image from the "image" job.
   release:
     name: Publish, SBOM and sign
     # always() + an explicit check on the gate, NOT the default success():
@@ -321,7 +360,7 @@ jobs:
       && needs.gate.result == 'success'
       && github.event_name == 'push'
       && github.ref == 'refs/heads/main'
-    needs: [gate]
+    needs: [gate, image]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -342,6 +381,23 @@ jobs:
       - name: Compute image name
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
+      - name: Download the image
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image
+
+      # The artifact could have been replaced between jobs. Refuse to
+      # publish anything that is not the image that was scanned.
+      - name: Check it is the image that was scanned
+        env:
+          EXPECTED: ${{ needs.image.outputs.config-digest }}
+        run: |
+          actual="$(scripts/release/config-digest.sh image.tar)"
+          echo "scanned:  $EXPECTED"
+          echo "artifact: $actual"
+          [[ "$actual" == "$EXPECTED" ]]
+          docker load -i image.tar
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
@@ -349,23 +405,27 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-
-      - name: Build and push
-        id: push
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      - name: Install crane
+        uses: imjasonh/setup-crane@feee3b6bb0d4c68370f256a4502498c9227e5c6b # v0.7
         with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.IMAGE }}:sha-${{ github.sha }}
-            ${{ env.IMAGE }}:latest
-          # BuildKit can attach its own SBOM/provenance. Disabled here so
-          # the SBOM and signature come from Syft and Cosign, the tools
-          # this step is about.
-          provenance: false
-          sbom: false
+          version: v0.22.1
+
+      # One immutable tag per commit. Environments get their own tags later,
+      # by promotion (promote.yml), never by rebuilding.
+      - name: Push
+        id: push
+        env:
+          EXPECTED: ${{ needs.image.outputs.config-digest }}
+        run: |
+          docker tag dev-secops:local "$IMAGE:sha-$GITHUB_SHA"
+          docker push "$IMAGE:sha-$GITHUB_SHA"
+          digest="$(crane digest "$IMAGE:sha-$GITHUB_SHA")"
+          # Same check on the registry side: the published config must be
+          # the scanned one.
+          published="sha256:$(crane config "$IMAGE@$digest" | sha256sum | cut -d' ' -f1)"
+          echo "published config: $published"
+          [[ "$published" == "$EXPECTED" ]]
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
 
       # From here on, the image is always referenced by DIGEST. Tags can
       # be moved; the digest is the image content itself.
@@ -397,6 +457,12 @@ jobs:
           cosign verify "$IMAGE@$DIGEST" \
             --certificate-identity "$IDENTITY" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+      # First environment. Same digest, new tag: no rebuild.
+      - name: Promote to develop
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: crane tag "$IMAGE@$DIGEST" develop
 
       - name: Keep the SBOM as a build artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

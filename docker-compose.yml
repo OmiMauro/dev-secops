@@ -11,6 +11,9 @@ services:
     profiles: [app]
     build: .
     image: dev-secops:local
+    # Only ever use the local image (built here or loaded from the CI
+    # artifact). Never pull an image with this name from a registry.
+    pull_policy: never
     # No env_file on purpose: the API receives configuration here, but
     # its SECRETS (DB_PASSWORD, JWT_SECRET) only come from Vault.
     environment:

@@ -81,7 +81,7 @@ to rotate, nothing to leak. The identity is the **workflow** itself.
 Verify a published image from your machine (no key needed):
 
 ```bash
-IMAGE=ghcr.io/omimauro/dev-secops:latest
+IMAGE=ghcr.io/omimauro/dev-secops:develop     # or :sha-<commit>, :prod...
 cosign verify "$IMAGE" \
   --certificate-identity https://github.com/OmiMauro/dev-secops/.github/workflows/ci.yml@refs/heads/main \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
