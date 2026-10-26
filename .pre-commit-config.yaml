@@ -1,0 +1,22 @@
+# Git hooks managed by the pre-commit framework (https://pre-commit.com).
+# Install once per clone:   pre-commit install
+# Run on every file:        pre-commit run --all-files
+#
+# Hooks from other repos are pinned to a commit SHA, for the same reason
+# as GitHub Actions: a tag can be moved, a SHA cannot.
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
+    hooks:
+      - id: detect-private-key
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  # Same script the CI uses, so local and pipeline results match.
+  - repo: local
+    hooks:
+      - id: gitleaks
+        name: gitleaks (staged changes)
+        entry: scripts/security/secrets.sh staged
+        language: system
+        pass_filenames: false

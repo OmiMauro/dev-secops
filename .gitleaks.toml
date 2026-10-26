@@ -1,0 +1,22 @@
+# gitleaks configuration.
+# Starts from the built-in rules (hundreds of known token formats:
+# AWS, GitHub, Stripe, private keys...) and adds our own.
+title = "dev-secops gitleaks config"
+
+[extend]
+useDefault = true
+
+# Custom rule: our JWT signing secret. The default rules cannot know
+# that JWT_SECRET is sensitive in this project, so we teach them.
+[[rules]]
+id = "jwt-signing-secret"
+description = "Hardcoded JWT_SECRET value"
+regex = '''JWT_SECRET\s*[=:]\s*['"]?([A-Za-z0-9+/=_\-]{32,})'''
+secretGroup = 1
+keywords = ["jwt_secret"]
+
+# Files that may contain secret-looking strings on purpose.
+# Keep this list short: every entry is a place where leaks go unseen.
+[[allowlists]]
+description = "Example env file only holds placeholders"
+paths = ['''^\.env\.example$''']

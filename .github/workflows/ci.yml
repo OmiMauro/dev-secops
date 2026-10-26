@@ -53,3 +53,22 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  secrets:
+    name: Secret scanning (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Full history: by default checkout only fetches the last commit,
+          # and a secret removed later would still be in older commits.
+          fetch-depth: 0
+
+      # The pre-commit hook can be skipped with `git commit --no-verify`.
+      # This job cannot: it is the safety net.
+      - name: Scan the whole git history
+        run: scripts/security/secrets.sh history
