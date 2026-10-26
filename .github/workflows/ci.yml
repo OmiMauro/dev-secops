@@ -201,12 +201,54 @@ jobs:
           sarif_file: reports/checkov.sarif
           category: checkov
 
+  # Starts the real stack (PostgreSQL + Vault + the API image) and attacks
+  # it with OWASP ZAP. Slowest job, so it runs in parallel with the rest.
+  dast:
+    name: Dynamic scan (OWASP ZAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Random values for this run only. The environment is destroyed when
+      # the job ends, so they never need to be stored anywhere.
+      - name: Create a throwaway .env
+        run: |
+          cp .env.example .env
+          sed -i \
+            -e "s|^DB_PASSWORD=.*|DB_PASSWORD=$(openssl rand -hex 16)|" \
+            -e "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" \
+            -e "s|^VAULT_ROOT_TOKEN=.*|VAULT_ROOT_TOKEN=$(openssl rand -hex 16)|" \
+            .env
+
+      - name: Start the stack
+        run: SWAGGER_ENABLED=true scripts/stack.sh up
+
+      - name: Scan with ZAP
+        run: scripts/security/dast.sh
+
+      - name: API logs (on failure)
+        if: failure()
+        run: docker compose --profile app logs api
+
+      - name: Keep the ZAP report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: zap-report
+          path: reports/zap/report.*
+          if-no-files-found: ignore
+
   # Publishes the image ONLY if every security job above passed, and only
   # from main. Pull requests and failed gates never produce an artifact.
   release:
     name: Publish, SBOM and sign
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [build, secrets, sca, sast, image, iac]
+    needs: [build, secrets, sca, sast, image, iac, dast]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

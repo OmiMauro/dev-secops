@@ -84,6 +84,7 @@ JwtAuthGuard → ValidationPipe(CreateNoteDto) → NotesController.create
 | Method | Route                 | Auth | Description                     |
 |--------|-----------------------|------|---------------------------------|
 | GET    | /api/health           | No   | API status                      |
+| GET    | /api/docs             | No   | Swagger UI (only with `SWAGGER_ENABLED=true`) |
 | POST   | /api/auth/register    | No   | `{ email, password }` → token   |
 | POST   | /api/auth/login       | No   | `{ email, password }` → token   |
 | GET    | /api/notes?search=    | Yes  | List (and search) my notes      |
@@ -103,6 +104,7 @@ Authenticated routes need the header `Authorization: Bearer <accessToken>`.
 - The app refuses to start if variables are missing or `JWT_SECRET` is too short.
 - Postgres is published on `127.0.0.1` only.
 - `.env` is in `.gitignore`.
+- Security headers with `helmet`; NUL bytes rejected in note fields (both found by ZAP, step 9).
 
 ## Roadmap
 
@@ -115,5 +117,5 @@ Authenticated routes need the header `Authorization: Bearer <accessToken>`.
 - [x] 6. SBOM and signing — Syft, Cosign ([guide](docs/06-sbom-signing.md))
 - [x] 7. IaC — Terraform, Checkov, Conftest ([guide](docs/07-iac.md))
 - [x] 8. Secrets in production — Vault ([guide](docs/08-vault.md))
-- [ ] 9. DAST — OWASP ZAP
+- [x] 9. DAST — OWASP ZAP ([guide](docs/09-dast.md))
 - [ ] 10. Full pipeline

@@ -1,5 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
+import { setupSwagger } from './config/swagger';
 import { loadSecretsFromVault } from './config/vault';
 
 async function bootstrap() {
@@ -13,6 +15,11 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  // Security headers on every response (X-Content-Type-Options,
+  // Strict-Transport-Security, Content-Security-Policy...) and removes
+  // "X-Powered-By: Express", which tells attackers what to target.
+  app.use(helmet());
+
   // Validates every incoming DTO:
   // - whitelist: strips properties the DTO does not declare
   // - forbidNonWhitelisted: and answers 400 if any are sent
@@ -24,6 +31,10 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  if (process.env.SWAGGER_ENABLED === 'true') {
+    setupSwagger(app);
+  }
 
   await app.listen(process.env.PORT ?? 3000);
 }

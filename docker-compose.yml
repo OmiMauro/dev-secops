@@ -2,6 +2,10 @@
 #               run the API with `npm run start:dev`.
 # Full stack:   scripts/stack.sh up                  → also Vault and the
 #               API, built from the Dockerfile exactly as it would ship.
+# Fixed project name, so container and volume names do not depend on
+# the folder the repo was cloned into.
+name: dev-secops
+
 services:
   api:
     profiles: [app]
@@ -17,6 +21,8 @@ services:
       DB_USER: ${DB_USER}
       DB_NAME: ${DB_NAME}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      # Exposes the OpenAPI spec for the DAST scan. Off unless asked for.
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
       VAULT_ADDR: http://vault:8200
       # Created by scripts/vault/setup.sh and passed by scripts/stack.sh
       # from the shell, never written to a file.
