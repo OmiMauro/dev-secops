@@ -39,7 +39,7 @@ Install the pre-commit framework once (it is a Python tool):
 ```bash
 sudo apt install pre-commit        # Debian/Ubuntu
 # or: pipx install pre-commit
-pre-commit install                 # activates the hooks in this clone
+pre-commit install                 # activates the commit AND push hooks in this clone
 ```
 
 The gitleaks hook calls `scripts/security/secrets.sh`, which runs gitleaks

@@ -1,9 +1,23 @@
 # Git hooks managed by the pre-commit framework (https://pre-commit.com).
 # Install once per clone:   pre-commit install
-# Run on every file:        pre-commit run --all-files
+# Run by hand:              pre-commit run --all-files                    (commit hooks)
+#                           pre-commit run --all-files --hook-stage pre-push
+#
+# Two layers, by speed. A slow hook is a hook people skip with --no-verify:
+#   pre-commit  seconds:     secrets and lint, on every commit
+#   pre-push    ~30-60 s:    tests, build, SAST, and the scanners whose input
+#                            changed in the commits being pushed
+# Image scan, SBOM and DAST take minutes and need the full stack, so they
+# only run in CI. CI also runs everything below again: hooks can be
+# skipped, the pipeline cannot.
 #
 # Hooks from other repos are pinned to a commit SHA, for the same reason
 # as GitHub Actions: a tag can be moved, a SHA cannot.
+
+# `pre-commit install` installs both hook types.
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c # frozen: v6.0.0
@@ -12,11 +26,78 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
 
-  # Same script the CI uses, so local and pipeline results match.
+  # Same scripts the CI uses, so local and pipeline results match.
   - repo: local
     hooks:
+      # ---------- on every commit ----------
       - id: gitleaks
         name: gitleaks (staged changes)
         entry: scripts/security/secrets.sh staged
         language: system
         pass_filenames: false
+
+      - id: eslint
+        name: eslint
+        entry: npm run -s lint
+        language: system
+        files: \.ts$
+        pass_filenames: false
+
+      # ---------- on every push ----------
+      # `files`: on pre-push, pre-commit looks at the files changed by the
+      # commits being pushed. A hook whose files did not change is skipped.
+      - id: unit-tests
+        name: unit tests (vitest)
+        entry: npm test
+        language: system
+        files: ^(src/|package(-lock)?\.json$|vitest\.config\.mts$)
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: build
+        name: build (tsc)
+        entry: npm run -s build
+        language: system
+        files: ^(src/|package(-lock)?\.json$|tsconfig.*\.json$)
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: sast
+        name: SAST (semgrep)
+        entry: scripts/security/sast.sh scan
+        language: system
+        files: ^(src/|\.semgrep/)
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: sast-rule-tests
+        name: SAST custom rule tests
+        entry: scripts/security/sast.sh test
+        language: system
+        files: ^\.semgrep/
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: sca
+        name: dependency scan (trivy)
+        entry: scripts/security/sca.sh
+        language: system
+        files: ^(package-lock\.json|\.trivyignore)$
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: iac
+        name: IaC (terraform, checkov, conftest)
+        entry: scripts/security/iac.sh
+        language: system
+        files: ^(terraform/|policy/)
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: workflows
+        name: pipeline security (actionlint, zizmor)
+        entry: scripts/security/workflows.sh
+        language: system
+        files: ^\.github/
+        pass_filenames: false
+        stages: [pre-push]

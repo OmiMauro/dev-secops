@@ -69,7 +69,8 @@ The table in the course, mapped to this repo:
 
 | Moment | What runs | Where |
 |--------|-----------|-------|
-| `git commit` | gitleaks (staged), private key detection | pre-commit hook (step 2) |
+| `git commit` (~1 s) | gitleaks (staged), private key detection, ESLint | pre-commit hook |
+| `git push` (~30 s max) | tests, build, Semgrep; Trivy, Checkov/Conftest, zizmor only if their files changed | pre-push hook |
 | Pull request | Everything + dependency review | `ci.yml` |
 | Push to `main` | Everything + release (sign, SBOM) | `ci.yml` |
 | Every Monday 06:00 UTC | Everything, on unchanged code | `ci.yml` (`schedule`) |
@@ -78,6 +79,37 @@ The table in the course, mapped to this repo:
 
 The weekly run matters: a scan that passed last month says nothing
 about the CVEs published since then.
+
+### Shift left: fail on your machine, not in CI
+
+Waiting minutes for CI to report a SQL injection is slow feedback. The
+local hooks (`.pre-commit-config.yaml`) catch most problems before they
+leave your machine:
+
+```
+$ git push
+unit tests (vitest)......................................................Passed
+build (tsc)..............................................................Passed
+SAST (semgrep)...........................................................Failed
+   ❯❯❱ semgrep.rules.typeorm-sql-injection
+dependency scan (trivy)..............................(no files to check)Skipped
+IaC (terraform, checkov, conftest)...................(no files to check)Skipped
+error: failed to push some refs
+```
+
+Rules followed when choosing what goes where:
+
+- **Commit hooks must take seconds.** Slow hooks get skipped with
+  `--no-verify`, and then they protect nothing.
+- **Push hooks only run what is affected.** `files:` patterns skip the
+  Trivy scan when `package-lock.json` did not change, Checkov when
+  `terraform/` did not change, and so on.
+- **Minutes-long checks stay in CI**: image build and scan, SBOM, DAST.
+- **CI runs everything again.** Hooks are a fast first filter on a
+  machine you control; the pipeline is the gate nobody can skip.
+
+Install both hook types once per clone with `pre-commit install`.
+
 
 ## The gate
 
