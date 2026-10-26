@@ -153,3 +153,32 @@ qb.orderBy(`note.${sortColumn}`);
   running app. That is what IaC scanning (step 7) and DAST (step 9) are for.
 - SonarQube is the other big name; it adds code quality metrics and a
   server with history, at the cost of running that server.
+
+## Pinning the community rules
+
+`--config p/typescript` downloads whatever the Semgrep Registry serves
+**today**. Rules get added, changed and removed upstream, so the same code
+can pass on Monday and fail on Tuesday, and nobody can tell why.
+
+`.semgrep/registry.lock` pins each pack by SHA-256, like `package-lock.json`
+pins npm packages:
+
+```
+967e551f37a9...  typescript.yml
+f8d691f09ab5...  nodejs.yml
+72de2b065f49...  owasp-top-ten.yml
+```
+
+`sast.sh` downloads the packs, checks them against the lock and only then
+scans. When a pack changes upstream:
+
+```
+Semgrep registry rules changed upstream:
+< 967e551f37a9...  typescript.yml
+> 067e551f37a9...  typescript.yml
+Review the new rules, then run: scripts/security/sast.sh update-lock
+```
+
+Updating the lock is a deliberate commit that can be reviewed, instead of
+a silent change in CI. The packs themselves are not committed: the
+Semgrep Rules License does not allow redistributing them.
