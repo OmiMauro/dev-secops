@@ -40,9 +40,10 @@ inside each module, **by layer**:
 
 ```
 src/
-├── main.ts                   Bootstrap: /api prefix and global validation
+├── main.ts                   Bootstrap: Vault secrets, helmet, validation, Swagger
 ├── app.module.ts             Root module: wires config, database and modules
-├── config/                   Environment variables and database connection
+├── config/                   Env validation, database, Vault loader, Swagger
+├── common/validators/        Reusable validators (@NoNullBytes)
 ├── migrations/               Versioned database schema (used in production)
 └── modules/
     ├── auth/                 Register, login and JWT protection
@@ -106,16 +107,31 @@ Authenticated routes need the header `Authorization: Bearer <accessToken>`.
 - `.env` is in `.gitignore`.
 - Security headers with `helmet`; NUL bytes rejected in note fields (both found by ZAP, step 9).
 
-## Roadmap
+## DevSecOps steps
 
-- [x] 0. Base app
-- [x] 1. Pipeline in GitHub Actions (lint, test, build)
-- [x] 2. Secrets in code — gitleaks, pre-commit ([guide](docs/02-secrets.md))
-- [x] 3. Dependencies and SCA — Trivy, Dependabot ([guide](docs/03-dependencies-sca.md))
-- [x] 4. SAST — Semgrep ([guide](docs/04-sast.md))
-- [x] 5. Container image — Dockerfile + Trivy ([guide](docs/05-container-image.md))
-- [x] 6. SBOM and signing — Syft, Cosign ([guide](docs/06-sbom-signing.md))
-- [x] 7. IaC — Terraform, Checkov, Conftest ([guide](docs/07-iac.md))
-- [x] 8. Secrets in production — Vault ([guide](docs/08-vault.md))
-- [x] 9. DAST — OWASP ZAP ([guide](docs/09-dast.md))
-- [ ] 10. Full pipeline
+Each step has a guide with what was added, why, and a "break it" exercise.
+Run every static check at once with `scripts/security/all.sh`.
+
+| Step | Topic | Tools | Guide |
+|------|-------|-------|-------|
+| 0 | Base app | NestJS, TypeORM, PostgreSQL | this README |
+| 1 | CI pipeline | GitHub Actions | `.github/workflows/ci.yml` |
+| 2 | Secrets in code | gitleaks, pre-commit | [docs/02-secrets.md](docs/02-secrets.md) |
+| 3 | Dependencies (SCA) | Trivy, Dependabot, dependency review | [docs/03-dependencies-sca.md](docs/03-dependencies-sca.md) |
+| 4 | Static analysis (SAST) | Semgrep + custom rules | [docs/04-sast.md](docs/04-sast.md) |
+| 5 | Container image | Distroless, Trivy | [docs/05-container-image.md](docs/05-container-image.md) |
+| 6 | SBOM and signing | Syft, Cosign | [docs/06-sbom-signing.md](docs/06-sbom-signing.md) |
+| 7 | Infrastructure as Code | Terraform, Checkov, Conftest/OPA | [docs/07-iac.md](docs/07-iac.md) |
+| 8 | Secrets in production | Vault, External Secrets | [docs/08-vault.md](docs/08-vault.md) |
+| 9 | Dynamic analysis (DAST) | OWASP ZAP | [docs/09-dast.md](docs/09-dast.md) |
+| 10 | Full pipeline | GitHub Actions, actionlint, zizmor | [docs/10-pipeline.md](docs/10-pipeline.md) |
+
+Every git commit in the history is one step, so `git show <commit>`
+shows exactly what each step changed.
+
+## Requirements
+
+- Node.js 24 (`.nvmrc`)
+- Docker: every security tool runs in a container, pinned by digest in
+  `scripts/security/images.sh`. Nothing else to install.
+- Optional: [pre-commit](https://pre-commit.com) for the git hooks (step 2).

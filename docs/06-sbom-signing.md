@@ -26,7 +26,7 @@ scripts/security/sbom.sh             # SBOM for dev-secops:local
 ```
 
 ```
-==> Packages found: 266
+==> Packages found: 266        (at step 6; the number grows with new dependencies)
 ==> Scanning the SBOM for vulnerabilities
 ```
 
