@@ -1,0 +1,14 @@
+rules:
+  - id: jwt-ignore-expiration
+    message: >-
+      JWT verification with ignoreExpiration: true accepts expired tokens
+      forever. A stolen token would never stop working.
+    severity: ERROR
+    languages: [typescript]
+    metadata:
+      category: security
+      cwe: "CWE-613: Insufficient Session Expiration"
+    pattern-either:
+      - pattern: '$JWT.verify($TOKEN, {..., ignoreExpiration: true, ...})'
+      - pattern: '$JWT.verifyAsync($TOKEN, {..., ignoreExpiration: true, ...})'
+      - pattern: '$JWT.verify($TOKEN, $SECRET, {..., ignoreExpiration: true, ...})'

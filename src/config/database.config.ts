@@ -12,8 +12,8 @@ export function buildDatabaseConfig(
     password: config.getOrThrow<string>('DB_PASSWORD'),
     database: config.getOrThrow<string>('DB_NAME'),
     autoLoadEntities: true,
-    // Creates/updates tables from the entities. Handy for learning,
-    // dangerous in production (use migrations there).
-    synchronize: true,
+    // Creates/updates tables from the entities. Handy while developing,
+    // dangerous in production, where schema changes go through migrations.
+    synchronize: config.get<string>('NODE_ENV') !== 'production',
   };
 }
