@@ -23,6 +23,10 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
       # Exposes the OpenAPI spec for the DAST scan. Off unless asked for.
       SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      # Rate limits (requests per minute per IP). Empty = the safe defaults
+      # in src/config/throttler.config.ts. Raised only for the DAST scan.
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-}
+      AUTH_THROTTLE_LIMIT: ${AUTH_THROTTLE_LIMIT:-}
       VAULT_ADDR: http://vault:8200
       # Created by scripts/vault/setup.sh and passed by scripts/stack.sh
       # from the shell, never written to a file.

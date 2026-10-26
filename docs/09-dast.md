@@ -171,3 +171,25 @@ silently: remove `helmet()` and the build breaks.
 ZAP's active scan sends real attacks. Run it against your own local or
 test environments, never against a system you do not have written
 permission to test.
+
+## Rate limiting vs DAST
+
+Since the API limits `/auth/*` to 5 requests per minute per IP, ZAP's
+attacks against login and register were mostly answered with
+`429 Too Many Requests`: the limit works against a scanner exactly as it
+does against an attacker, and those routes were barely tested.
+
+The limits are configurable (`THROTTLE_LIMIT`, `AUTH_THROTTLE_LIMIT`) and
+the `dast` job raises them **only for the scan**:
+
+```bash
+SWAGGER_ENABLED=true THROTTLE_LIMIT=100000 AUTH_THROTTLE_LIMIT=100000 scripts/stack.sh up
+```
+
+With the defaults the 6th login attempt in a minute gets a 429
+(`Retry-After: 60`); with the raised limits ZAP got no 429 at all. Never
+raise them in production.
+
+Note that ZAP never reported the *missing* rate limit before it was
+added: scanners find broken behavior, not absent controls. Brute-force
+protection had to come from reviewing the design.

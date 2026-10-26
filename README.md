@@ -105,6 +105,7 @@ Authenticated routes need the header `Authorization: Bearer <accessToken>`.
 - The app refuses to start if variables are missing or `JWT_SECRET` is too short.
 - Postgres is published on `127.0.0.1` only.
 - `.env` is in `.gitignore`.
+- Rate limiting: 100 requests/min per IP, 5/min on `/auth/*` (brute force).
 - Security headers with `helmet`; NUL bytes rejected in note fields (both found by ZAP, step 9).
 
 ## DevSecOps steps
