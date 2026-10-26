@@ -1,9 +1,9 @@
 import { Note } from '../entities/note.entity';
 
 /**
- * Vista: lo que el cliente ve de una nota.
- * Separarla de la entidad permite cambiar la base de datos sin romper
- * la API, y evita filtrar campos internos (como owner con sus datos).
+ * View: what the client sees of a note.
+ * Keeping it separate from the entity lets the database change without
+ * breaking the API, and avoids leaking internal fields (like owner).
  */
 export class NoteResponseDto {
   id: string;

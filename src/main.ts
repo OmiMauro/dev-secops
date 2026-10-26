@@ -7,10 +7,10 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
-  // Valida todos los DTOs de entrada:
-  // - whitelist: descarta propiedades que el DTO no declara
-  // - forbidNonWhitelisted: y además responde 400 si llegan
-  // Así nadie puede colar campos como "ownerId" en el body.
+  // Validates every incoming DTO:
+  // - whitelist: strips properties the DTO does not declare
+  // - forbidNonWhitelisted: and answers 400 if any are sent
+  // This way nobody can sneak fields like "ownerId" into the body.
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

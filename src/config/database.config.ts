@@ -12,8 +12,8 @@ export function buildDatabaseConfig(
     password: config.getOrThrow<string>('DB_PASSWORD'),
     database: config.getOrThrow<string>('DB_NAME'),
     autoLoadEntities: true,
-    // Crea/actualiza las tablas según las entidades. Cómodo para
-    // aprender, peligroso en producción (ahí se usan migraciones).
+    // Creates/updates tables from the entities. Handy for learning,
+    // dangerous in production (use migrations there).
     synchronize: true,
   };
 }

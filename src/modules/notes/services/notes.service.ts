@@ -6,9 +6,9 @@ import { UpdateNoteDto } from '../dto/update-note.dto';
 import { Note } from '../entities/note.entity';
 
 /**
- * Lógica de negocio de las notas.
- * Todas las operaciones reciben el userId: un usuario solo puede
- * ver y tocar SUS notas (evita IDOR, uno de los fallos más comunes).
+ * Business logic for notes.
+ * Every operation receives the userId: a user can only see and modify
+ * THEIR notes (prevents IDOR, one of the most common flaws).
  */
 @Injectable()
 export class NotesService {
@@ -20,8 +20,8 @@ export class NotesService {
   findAllForUser(userId: string, search?: string): Promise<Note[]> {
     const where: FindOptionsWhere<Note> = { ownerId: userId };
     if (search) {
-      // TypeORM pasa "search" como parámetro, nunca lo concatena
-      // en el SQL. Por eso esto no es vulnerable a SQL injection.
+      // TypeORM sends "search" as a bound parameter, it is never
+      // concatenated into the SQL. That is why this is not injectable.
       where.title = ILike(`%${search}%`);
     }
     return this.notesRepository.find({
@@ -34,10 +34,10 @@ export class NotesService {
     const note = await this.notesRepository.findOne({
       where: { id, ownerId: userId },
     });
-    // 404 tanto si no existe como si es de otro usuario:
-    // no revelamos que la nota existe.
+    // 404 both when it does not exist and when it belongs to someone
+    // else: we do not reveal that the note exists.
     if (!note) {
-      throw new NotFoundException('Nota no encontrada');
+      throw new NotFoundException('Note not found');
     }
     return note;
   }

@@ -21,9 +21,9 @@ import { UpdateNoteDto } from '../dto/update-note.dto';
 import { NotesService } from '../services/notes.service';
 
 /**
- * Controlador: recibe la petición HTTP, delega en el servicio
- * y convierte el resultado a la vista (NoteResponseDto).
- * No contiene lógica de negocio.
+ * Controller: receives the HTTP request, delegates to the service
+ * and maps the result to the view (NoteResponseDto).
+ * Contains no business logic.
  */
 @Controller('notes')
 @UseGuards(JwtAuthGuard)

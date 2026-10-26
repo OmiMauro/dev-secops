@@ -1,5 +1,5 @@
-# Infraestructura de desarrollo. La API la arrancas tú con
-# `npm run start:dev`; aquí solo vive la base de datos.
+# Development infrastructure. You start the API yourself with
+# `npm run start:dev`; only the database lives here.
 services:
   db:
     image: postgres:17-alpine
@@ -7,8 +7,8 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
-    # 127.0.0.1 = solo accesible desde tu máquina, no desde la red.
-    # Con "5432:5432" a secas quedaría abierta a cualquiera de tu LAN.
+    # 127.0.0.1 = reachable only from your machine, not the network.
+    # A plain "5432:5432" would expose it to anyone on your LAN.
     ports:
       - "127.0.0.1:${DB_PORT}:5432"
     volumes:

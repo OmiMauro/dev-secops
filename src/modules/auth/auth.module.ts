@@ -6,8 +6,8 @@ import { AuthController } from './controllers/auth.controller';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthService } from './services/auth.service';
 
-// @Global para que otros módulos (como notes) puedan usar
-// JwtAuthGuard sin tener que importar AuthModule.
+// @Global so other modules (like notes) can use JwtAuthGuard
+// without importing AuthModule.
 @Global()
 @Module({
   imports: [

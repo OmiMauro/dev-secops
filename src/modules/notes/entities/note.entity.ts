@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-/** Modelo: cómo se guarda una nota en la base de datos. */
+/** Model: how a note is stored in the database. */
 @Entity('notes')
 export class Note {
   @PrimaryGeneratedColumn('uuid')

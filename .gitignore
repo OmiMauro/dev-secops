@@ -3,6 +3,6 @@ dist/
 coverage/
 *.tsbuildinfo
 
-# Variables de entorno reales: NUNCA se suben al repo.
-# Solo se versiona .env.example (sin valores secretos).
+# Real environment variables: NEVER committed.
+# Only .env.example (without secret values) is versioned.
 .env
