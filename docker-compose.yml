@@ -1,6 +1,30 @@
-# Development infrastructure. You start the API yourself with
-# `npm run start:dev`; only the database lives here.
+# Development:  docker compose up -d                 → only the database;
+#               run the API with `npm run start:dev`.
+# Full stack:   docker compose --profile app up -d   → also the API, built
+#               from the Dockerfile exactly as it would ship.
 services:
+  api:
+    profiles: [app]
+    build: .
+    image: dev-secops:local
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DB_HOST: db
+      DB_PORT: 5432
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Runtime hardening. Even if the app is compromised:
+    read_only: true                  # it cannot write to its filesystem
+    cap_drop: [ALL]                  # it has no Linux capabilities
+    security_opt:
+      - no-new-privileges:true       # and cannot gain new privileges
+    tmpfs:
+      - /tmp                         # the only writable place, in memory
+
   db:
     image: postgres:17-alpine
     environment:

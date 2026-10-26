@@ -29,3 +29,12 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
+
+  # Bumps the base image digests in the Dockerfile, e.g. when the
+  # distroless image gets a security patch.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7

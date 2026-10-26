@@ -1,5 +1,17 @@
+# Keep the build context small and free of secrets. Even with explicit
+# COPY lines, anything sent in the context can leak through a careless
+# "COPY . ." later on.
+.env
+.env.*
+!.env.example
+.git
 node_modules
 dist
 coverage
-.git
-.env
+reports
+docs
+scripts
+.semgrep
+.github
+terraform
+*.md

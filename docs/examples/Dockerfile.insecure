@@ -1,0 +1,17 @@
+# DO NOT USE. Counter-example for docs/05-container-image.md.
+# Every line here is a common mistake; compare it with ../../Dockerfile.
+
+# Mutable tag, full Debian image with compilers, git, curl... (~1.6 GB)
+FROM node:24
+
+WORKDIR /app
+
+# Copies EVERYTHING: .env, .git, node_modules from your laptop...
+COPY . .
+
+# Dev dependencies and the TypeScript compiler end up in production.
+RUN npm install && npm run build
+
+# No USER instruction: the app runs as root.
+EXPOSE 3000
+CMD ["npm", "run", "start"]
