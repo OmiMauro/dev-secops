@@ -99,7 +99,7 @@ Authenticated routes need the header `Authorization: Bearer <accessToken>`.
 - [x] 3. Dependencies and SCA — Trivy, Dependabot ([guide](docs/03-dependencies-sca.md))
 - [x] 4. SAST — Semgrep ([guide](docs/04-sast.md))
 - [x] 5. Container image — Dockerfile + Trivy ([guide](docs/05-container-image.md))
-- [ ] 6. SBOM and signing — Syft, Cosign
+- [x] 6. SBOM and signing — Syft, Cosign ([guide](docs/06-sbom-signing.md))
 - [ ] 7. IaC — Terraform + Checkov
 - [ ] 8. Secrets in production — Vault
 - [ ] 9. DAST — OWASP ZAP
