@@ -1,0 +1,25 @@
+rules:
+  - id: typeorm-sql-injection
+    message: >-
+      SQL built with string interpolation or concatenation. User input can
+      change the query (SQL injection). Use a bound parameter instead:
+      .where('note.title ILIKE :term', { term: `%${search}%` })
+    severity: ERROR
+    languages: [typescript]
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+      owasp: "A03:2021 - Injection"
+    pattern-either:
+      # repository.query(`SELECT ... ${x}`) / manager.query("..." + x)
+      - pattern: $DB.query(`...${$X}...`, ...)
+      - pattern: '$DB.query("..." + $X, ...)'
+      - pattern: $DB.query($A + $B, ...)
+      # queryBuilder.where(`title = '${x}'`) and friends
+      - patterns:
+          - pattern-either:
+              - pattern: $QB.$METHOD(`...${$X}...`, ...)
+              - pattern: '$QB.$METHOD("..." + $X, ...)'
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(where|andWhere|orWhere|having|andHaving|orHaving|orderBy|addOrderBy|groupBy|select|addSelect)$

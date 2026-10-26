@@ -1,0 +1,12 @@
+rules:
+  - id: typeorm-synchronize-enabled
+    message: >-
+      `synchronize: true` lets TypeORM alter the database schema on every
+      start, which can drop columns and data. Enable it only outside
+      production, e.g. synchronize: nodeEnv !== 'production'.
+    severity: ERROR
+    languages: [typescript]
+    metadata:
+      category: security
+      cwe: "CWE-1188: Insecure Default Initialization of Resource"
+    pattern: '{..., synchronize: true, ...}'
