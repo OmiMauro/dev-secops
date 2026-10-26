@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Variables de entorno reales: NUNCA se suben al repo.
+# Solo se versiona .env.example (sin valores secretos).
+.env
