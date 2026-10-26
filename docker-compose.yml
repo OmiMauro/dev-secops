@@ -1,21 +1,33 @@
 # Development:  docker compose up -d                 → only the database;
 #               run the API with `npm run start:dev`.
-# Full stack:   docker compose --profile app up -d   → also the API, built
-#               from the Dockerfile exactly as it would ship.
+# Full stack:   scripts/stack.sh up                  → also Vault and the
+#               API, built from the Dockerfile exactly as it would ship.
 services:
   api:
     profiles: [app]
     build: .
     image: dev-secops:local
-    env_file: .env
+    # No env_file on purpose: the API receives configuration here, but
+    # its SECRETS (DB_PASSWORD, JWT_SECRET) only come from Vault.
     environment:
       NODE_ENV: production
+      PORT: 3000
       DB_HOST: db
       DB_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      VAULT_ADDR: http://vault:8200
+      # Created by scripts/vault/setup.sh and passed by scripts/stack.sh
+      # from the shell, never written to a file.
+      VAULT_ROLE_ID: ${VAULT_ROLE_ID:-}
+      VAULT_SECRET_ID: ${VAULT_SECRET_ID:-}
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
       db:
+        condition: service_healthy
+      vault:
         condition: service_healthy
     # Runtime hardening. Even if the app is compromised:
     read_only: true                  # it cannot write to its filesystem
@@ -39,6 +51,23 @@ services:
       - db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # Dev mode: in memory, already unsealed, a known root token. Perfect for
+  # learning, never for production (see docs/08-vault.md).
+  vault:
+    profiles: [app]
+    image: hashicorp/vault:2.2.1@sha256:962a92876e168d68eaaa24b0b8b49bbce1cb63024060a67bba95cd158a366fc2
+    command: server -dev
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_ROOT_TOKEN}
+      VAULT_ADDR: http://127.0.0.1:8200
+    ports:
+      - "127.0.0.1:8200:8200"
+    healthcheck:
+      test: ["CMD", "vault", "status"]
       interval: 5s
       timeout: 3s
       retries: 10
