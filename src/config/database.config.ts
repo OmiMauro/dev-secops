@@ -15,5 +15,9 @@ export function buildDatabaseConfig(
     // Creates/updates tables from the entities. Handy while developing,
     // dangerous in production, where schema changes go through migrations.
     synchronize: config.get<string>('NODE_ENV') !== 'production',
+    // In production the schema is created by versioned migrations,
+    // applied automatically when the app starts.
+    migrations: [__dirname + '/../migrations/*.js'],
+    migrationsRun: config.get<string>('NODE_ENV') === 'production',
   };
 }

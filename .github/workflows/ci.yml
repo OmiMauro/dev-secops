@@ -145,3 +145,34 @@ jobs:
         with:
           sarif_file: reports/sast.sarif
           category: semgrep
+
+  image:
+    name: Container image (build + Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build and scan the image
+        run: scripts/security/image.sh
+
+      - name: Upload Dockerfile results
+        if: always() && hashFiles('reports/dockerfile.sarif') != ''
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: reports/dockerfile.sarif
+          category: trivy-dockerfile
+
+      - name: Upload image results
+        if: always() && hashFiles('reports/image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          sarif_file: reports/image.sarif
+          category: trivy-image

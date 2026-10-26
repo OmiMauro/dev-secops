@@ -14,6 +14,12 @@ npm run start:dev             # API at http://localhost:3000/api
 
 Other commands: `npm test`, `npm run lint`, `npm run build`.
 
+Run the whole stack in containers, with the production image:
+
+```bash
+docker compose --profile app up -d --build
+```
+
 ## Architecture
 
 The code is organized **by module** (each feature lives together) and,
@@ -24,6 +30,7 @@ src/
 ├── main.ts                   Bootstrap: /api prefix and global validation
 ├── app.module.ts             Root module: wires config, database and modules
 ├── config/                   Environment variables and database connection
+├── migrations/               Versioned database schema (used in production)
 └── modules/
     ├── auth/                 Register, login and JWT protection
     │   ├── controllers/      HTTP → service
@@ -91,7 +98,7 @@ Authenticated routes need the header `Authorization: Bearer <accessToken>`.
 - [x] 2. Secrets in code — gitleaks, pre-commit ([guide](docs/02-secrets.md))
 - [x] 3. Dependencies and SCA — Trivy, Dependabot ([guide](docs/03-dependencies-sca.md))
 - [x] 4. SAST — Semgrep ([guide](docs/04-sast.md))
-- [ ] 5. Container image — Dockerfile + Trivy
+- [x] 5. Container image — Dockerfile + Trivy ([guide](docs/05-container-image.md))
 - [ ] 6. SBOM and signing — Syft, Cosign
 - [ ] 7. IaC — Terraform + Checkov
 - [ ] 8. Secrets in production — Vault
