@@ -87,7 +87,7 @@ Rutas con auth: header `Authorization: Bearer <accessToken>`.
 ## Hoja de ruta
 
 - [x] 0. App base
-- [ ] 1. Pipeline en GitHub Actions (lint, test, build)
+- [x] 1. Pipeline en GitHub Actions (lint, test, build)
 - [ ] 2. Secretos en el código — gitleaks, pre-commit
 - [ ] 3. Dependencias y SCA — Trivy, Dependabot
 - [ ] 4. SAST — Semgrep
