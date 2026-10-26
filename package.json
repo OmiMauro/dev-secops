@@ -1,7 +1,7 @@
 {
   "name": "dev-secops",
   "version": "0.1.0",
-  "description": "API de notas en NestJS para practicar DevSecOps",
+  "description": "NestJS notes API to practice DevSecOps",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {

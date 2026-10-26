@@ -8,7 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 import { JwtPayload } from '../services/auth.service';
 
-/** Usuario autenticado que el guard deja en request.user. */
+/** Authenticated user that the guard stores in request.user. */
 export interface AuthUser {
   id: string;
   email: string;
@@ -17,8 +17,8 @@ export interface AuthUser {
 type AuthenticatedRequest = Request & { user?: AuthUser };
 
 /**
- * Protege rutas: exige un header "Authorization: Bearer <token>" válido.
- * Si el token es correcto, guarda el usuario en request.user.
+ * Protects routes: requires a valid "Authorization: Bearer <token>" header.
+ * If the token is valid, the user is stored in request.user.
  */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -28,7 +28,7 @@ export class JwtAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const token = this.extractBearerToken(request);
     if (!token) {
-      throw new UnauthorizedException('Falta el token');
+      throw new UnauthorizedException('Missing token');
     }
 
     try {
@@ -36,7 +36,7 @@ export class JwtAuthGuard implements CanActivate {
       request.user = { id: payload.sub, email: payload.email };
       return true;
     } catch {
-      throw new UnauthorizedException('Token inválido o expirado');
+      throw new UnauthorizedException('Invalid or expired token');
     }
   }
 

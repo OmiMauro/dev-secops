@@ -13,7 +13,7 @@ import { RegisterDto } from '../dto/register.dto';
 
 const BCRYPT_ROUNDS = 12;
 
-/** Lo que guardamos dentro del token. Nada sensible: el JWT no va cifrado. */
+/** What goes inside the token. Nothing sensitive: a JWT is not encrypted. */
 export interface JwtPayload {
   sub: string;
   email: string;
@@ -29,7 +29,7 @@ export class AuthService {
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
     const existing = await this.usersService.findByEmail(dto.email);
     if (existing) {
-      throw new ConflictException('El email ya está registrado');
+      throw new ConflictException('Email is already registered');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
@@ -42,10 +42,10 @@ export class AuthService {
     const passwordOk =
       user !== null && (await bcrypt.compare(dto.password, user.passwordHash));
 
-    // Mismo mensaje si el email no existe o la contraseña es incorrecta:
-    // así un atacante no puede averiguar qué emails están registrados.
+    // Same message whether the email does not exist or the password is
+    // wrong: an attacker cannot find out which emails are registered.
     if (!user || !passwordOk) {
-      throw new UnauthorizedException('Credenciales inválidas');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
     return this.issueToken(user);

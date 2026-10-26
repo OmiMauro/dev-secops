@@ -6,7 +6,7 @@ import { NotesService } from './notes.service';
 
 describe('NotesService', () => {
   let service: NotesService;
-  // Repositorio falso: probamos la lógica sin base de datos real.
+  // Fake repository: tests the logic without a real database.
   const repository = {
     findOne: jest.fn(),
     find: jest.fn(),
@@ -26,7 +26,7 @@ describe('NotesService', () => {
     service = moduleRef.get(NotesService);
   });
 
-  it('busca la nota filtrando siempre por el dueño', async () => {
+  it('always filters by owner when looking up a note', async () => {
     repository.findOne.mockResolvedValue({ id: 'n1', ownerId: 'u1' });
 
     await service.findOneForUser('n1', 'u1');
@@ -36,7 +36,7 @@ describe('NotesService', () => {
     });
   });
 
-  it('lanza 404 si la nota es de otro usuario', async () => {
+  it('throws 404 when the note belongs to another user', async () => {
     repository.findOne.mockResolvedValue(null);
 
     await expect(service.findOneForUser('n1', 'otro')).rejects.toThrow(
@@ -44,11 +44,11 @@ describe('NotesService', () => {
     );
   });
 
-  it('asigna el dueño desde el token, no desde el body', async () => {
+  it('takes the owner from the token, not from the body', async () => {
     repository.create.mockImplementation((data) => data);
     repository.save.mockImplementation(async (data) => data);
 
-    const note = await service.create({ title: 'Hola' }, 'u1');
+    const note = await service.create({ title: 'Hello' }, 'u1');
 
     expect(note.ownerId).toBe('u1');
   });

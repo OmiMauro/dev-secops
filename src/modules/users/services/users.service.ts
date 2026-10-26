@@ -14,7 +14,7 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { email } });
   }
 
-  /** Igual que findByEmail pero incluyendo el hash, solo para el login. */
+  /** Same as findByEmail but including the hash. Only for login. */
   findByEmailWithPassword(email: string): Promise<User | null> {
     return this.usersRepository
       .createQueryBuilder('user')

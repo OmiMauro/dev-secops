@@ -1,6 +1,6 @@
 import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
-/** Todos los campos opcionales: solo se cambia lo que se envía. */
+/** All fields optional: only what is sent gets changed. */
 export class UpdateNoteDto {
   @IsOptional()
   @IsString()

@@ -6,6 +6,6 @@ export class RegisterDto {
 
   @IsString()
   @MinLength(12)
-  @MaxLength(72) // bcrypt ignora todo lo que pase de 72 bytes
+  @MaxLength(72) // bcrypt ignores anything beyond 72 bytes
   password: string;
 }

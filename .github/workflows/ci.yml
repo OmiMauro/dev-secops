@@ -5,44 +5,44 @@ on:
     branches: [main]
   pull_request:
 
-# Mínimo privilegio: por defecto el GITHUB_TOKEN puede escribir en el
-# repo. Este workflow solo necesita leer el código.
+# Least privilege: by default GITHUB_TOKEN can write to the repo.
+# This workflow only needs to read the code.
 permissions:
   contents: read
 
-# Si haces push dos veces seguidas, cancela la ejecución anterior.
-# Ahorra minutos de Actions.
+# If you push twice in a row, cancel the previous run.
+# Saves Actions minutes.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
-    name: Lint, test y build
+    name: Lint, test and build
     runs-on: ubuntu-latest
-    # Si algo se cuelga, que no consuma 6 horas (el máximo por defecto).
+    # If something hangs, don't burn 6 hours (the default maximum).
     timeout-minutes: 10
 
     steps:
-      # Las actions se fijan por SHA del commit, no por tag: un tag
-      # (v7) puede moverse a otro código si roban la cuenta del autor;
-      # un SHA es inmutable. El comentario indica la versión legible.
-      - name: Descargar el código
+      # Actions are pinned by commit SHA, not by tag: a tag (v7) can be
+      # moved to other code if the author's account is compromised;
+      # a SHA is immutable. The comment shows the human-readable version.
+      - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # No dejar el token guardado en .git/config para los pasos
-          # siguientes (ninguno necesita hacer push).
+          # Don't leave the token stored in .git/config for later
+          # steps (none of them needs to push).
           persist-credentials: false
 
-      - name: Instalar Node
+      - name: Set up Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: npm
 
-      # npm ci instala exactamente lo que dice package-lock.json:
-      # mismas versiones que en tu máquina, nada "más nuevo" colado.
-      - name: Instalar dependencias
+      # npm ci installs exactly what package-lock.json says: the same
+      # versions as on your machine, nothing "newer" sneaks in.
+      - name: Install dependencies
         run: npm ci
 
       - name: Lint

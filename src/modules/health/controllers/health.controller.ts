@@ -1,6 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 
-/** Endpoint público para comprobar que la API está viva. */
+/** Public endpoint to check that the API is alive. */
 @Controller('health')
 export class HealthController {
   @Get()

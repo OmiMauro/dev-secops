@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { Note } from '../../notes/entities/note.entity';
 
-/** Modelo: cómo se guarda un usuario en la base de datos. */
+/** Model: how a user is stored in the database. */
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -16,8 +16,8 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  // select: false → nunca se carga salvo que se pida explícitamente.
-  // Así es imposible devolver el hash por accidente en una respuesta.
+  // select: false → never loaded unless explicitly requested.
+  // This makes it impossible to leak the hash in a response by accident.
   @Column({ select: false })
   passwordHash: string;
 
