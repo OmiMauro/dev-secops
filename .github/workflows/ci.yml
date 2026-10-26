@@ -1,17 +1,35 @@
+# DevSecOps pipeline. Every security job runs the same script you can run
+# locally (scripts/security/*.sh), so results match on both sides.
+#
+#   build ─────────────┐
+#   workflows ─────────┤
+#   secrets ───────────┤
+#   sca ───────────────┤
+#   dependency-review ─┤  (pull requests only)
+#   sast ──────────────┼──▶ gate ──▶ release
+#   image ─────────────┤     │         (push to main only:
+#   iac ───────────────┤     │          GHCR + SBOM + Cosign)
+#   dast ──────────────┘     │
+#                            └─ the single check required by branch protection
+#
+# All jobs before the gate run in parallel. See docs/10-pipeline.md.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  # Weekly, even without new commits: new CVEs are published every day for
+  # code that has not changed.
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
-# Least privilege: by default GITHUB_TOKEN can write to the repo.
-# This workflow only needs to read the code.
-permissions:
-  contents: read
+# Least privilege: no permissions at all by default. Each job asks only
+# for what it needs, with a comment saying why.
+permissions: {}
 
 # If you push twice in a row, cancel the previous run.
-# Saves Actions minutes.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -22,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     # If something hangs, don't burn 6 hours (the default maximum).
     timeout-minutes: 10
+    permissions:
+      contents: read # clone the repository
 
     steps:
       # Actions are pinned by commit SHA, not by tag: a tag (v7) can be
@@ -59,10 +79,28 @@ jobs:
       - name: Build
         run: npm run build
 
+  workflows:
+    name: Pipeline security (actionlint + zizmor)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read # clone the repository
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Audit workflow files
+        run: scripts/security/workflows.sh
+
   secrets:
     name: Secret scanning (gitleaks)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read # clone the repository
 
     steps:
       - name: Checkout
@@ -83,8 +121,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
-      security-events: write # to upload results to the Security tab
+      contents: read # clone the repository
+      security-events: write # upload results to the Security tab
 
     steps:
       - name: Checkout
@@ -111,6 +149,8 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read # read the dependency graph of both branches
 
     steps:
       - name: Review new dependencies
@@ -123,8 +163,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
-      security-events: write
+      contents: read # clone the repository
+      security-events: write # upload results to the Security tab
 
     steps:
       - name: Checkout
@@ -151,8 +191,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: read
-      security-events: write
+      contents: read # clone the repository
+      security-events: write # upload results to the Security tab
 
     steps:
       - name: Checkout
@@ -182,8 +222,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: read
-      security-events: write
+      contents: read # clone the repository
+      security-events: write # upload results to the Security tab
 
     steps:
       - name: Checkout
@@ -207,6 +247,8 @@ jobs:
     name: Dynamic scan (OWASP ZAP)
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read # clone the repository
 
     steps:
       - name: Checkout
@@ -243,21 +285,45 @@ jobs:
           path: reports/zap/report.*
           if-no-files-found: ignore
 
-  # Publishes the image ONLY if every security job above passed, and only
-  # from main. Pull requests and failed gates never produce an artifact.
+  # One job that sums up all the others. Branch protection requires only
+  # this check, instead of a list of jobs that is easy to get out of date.
+  # always(): it must run (and fail) when a job it depends on fails;
+  # without it, it would be "skipped", and skipped counts as passing.
+  gate:
+    name: Security gate
+    if: always()
+    needs: [build, workflows, secrets, sca, dependency-review, sast, image, iac, dast]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {} # only reads the results of the other jobs
+
+    steps:
+      # "skipped" is fine: dependency-review only runs on pull requests.
+      - name: Check that no job failed
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          if echo "$RESULTS" | jq -e '[.[].result] | any(. == "failure" or . == "cancelled")' >/dev/null; then
+            echo "At least one security check failed."
+            exit 1
+          fi
+
+  # Publishes the image ONLY if the gate passed, and only from main.
+  # Pull requests, scheduled runs and failed gates never produce a release.
   release:
     name: Publish, SBOM and sign
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [build, secrets, sca, sast, image, iac, dast]
+    needs: [gate]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: read
-      packages: write # push to ghcr.io
+      contents: read # clone the repository
+      packages: write # push the image to ghcr.io
       # Lets the job request an OIDC token from GitHub. Cosign exchanges it
       # for a short-lived signing certificate (Sigstore "keyless" signing):
       # no private key to store, rotate or leak.
-      id-token: write
+      id-token: write # keyless signing with Cosign, see above
 
     steps:
       - name: Checkout
