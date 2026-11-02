@@ -32,7 +32,7 @@ RUN npm ci --omit=dev
 # code execution has almost nothing to work with, and there are far fewer
 # packages that can carry CVEs.
 # The ":nonroot" variant runs as UID 65532, never as root.
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:cb606325b7ec4af55462cb0b424a53b452a5b4a894ffe841fcf1048d216fb9f8
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:b8cec4b2f2126ff7bd034ec9ac207ffb3272667dfdc48376e3b035d3270549ba
 WORKDIR /app
 
 ENV NODE_ENV=production
